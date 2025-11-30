@@ -1,0 +1,9 @@
+{
+  "name": "Copy of HandyMate",
+  "description": "Your AI-powered solo living DIY assistant. Diagnose issues, get visual step-by-step guides, find tools nearby, and track your home maintenance mastery.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
