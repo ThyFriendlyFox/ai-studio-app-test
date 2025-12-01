@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import Scanner from './components/Scanner';
 import FixGuide from './components/FixGuide';
@@ -42,6 +43,8 @@ const App: React.FC = () => {
   const [myPosts, setMyPosts] = useState<CommunityPost[]>([]);
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostDesc, setNewPostDesc] = useState('');
+  const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   // Handlers
   const handleAnalyze = async (text: string, imageBase64?: string) => {
@@ -101,6 +104,16 @@ const App: React.FC = () => {
     setNewPostTitle('');
     setNewPostDesc('');
     setCurrentView(AppView.DASHBOARD); // Go back to dashboard to see "My Requests"
+  };
+
+  const handleConnect = () => {
+    setIsConnecting(true);
+    // Simulate connection delay
+    setTimeout(() => {
+        setIsConnecting(false);
+        alert(`Secure connection established with ${selectedPost?.author}. Opening video bridge...`);
+        setSelectedPost(null);
+    }, 2000);
   };
 
   // Lunchbox Modal Component (Inline for simplicity)
@@ -211,14 +224,65 @@ const App: React.FC = () => {
     </div>
   );
 
+  // Help Offer Modal
+  const HelpOfferModal = () => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedPost(null)}>
+      <div className="bg-paper p-6 rounded-sm shadow-2xl max-w-sm w-full transform rotate-0 border-t-8 border-trust-blue relative" onClick={e => e.stopPropagation()}>
+         {/* Clipboard Clip style for job sheet */}
+         <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-20 h-8 bg-gray-700 rounded-b-lg shadow-md flex items-center justify-center">
+            <div className="w-12 h-1 bg-gray-500 rounded-full"></div>
+         </div>
+
+         <div className="text-center mb-6 pt-4">
+             <h2 className="font-serif font-black text-2xl text-gray-800 uppercase tracking-wide">Job Sheet</h2>
+             <p className="font-mono text-xs text-trust-blue font-bold mt-1">CONNECTING NEIGHBORS</p>
+         </div>
+
+         <div className="bg-gray-50 p-4 rounded border border-gray-200 mb-6">
+            <h3 className="font-bold text-lg text-gray-800 mb-1">{selectedPost?.title}</h3>
+            <p className="font-mono text-xs text-gray-500 mb-3">Posted by {selectedPost?.author} • {selectedPost?.timeAgo}</p>
+            <p className="text-gray-600 italic text-sm border-l-4 border-gray-300 pl-3">"{selectedPost?.description}"</p>
+         </div>
+
+         <div className="space-y-3">
+            {isConnecting ? (
+               <div className="bg-trust-blue text-white py-4 rounded font-bold text-center flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>ESTABLISHING SECURE LINE...</span>
+               </div>
+            ) : (
+                <>
+                    <button 
+                        onClick={handleConnect}
+                        className="w-full py-4 bg-trust-blue text-white font-black font-serif text-lg tracking-wider rounded shadow-[4px_4px_0px_rgba(0,0,0,0.2)] hover:bg-blue-400 hover:translate-y-[1px] hover:shadow-[2px_2px_0px_rgba(0,0,0,0.2)] transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>📹</span> VIDEO ASSIST
+                    </button>
+                    <button 
+                         onClick={() => { alert("Chat feature coming soon!"); }}
+                        className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 font-bold font-serif text-lg tracking-wider rounded shadow-[2px_2px_0px_rgba(0,0,0,0.1)] hover:bg-gray-50 hover:translate-y-[1px] transition-all flex items-center justify-center gap-2"
+                    >
+                        <span>💬</span> TEXT CHAT
+                    </button>
+                </>
+            )}
+         </div>
+
+         <p className="text-center text-[10px] text-gray-400 mt-6 max-w-[200px] mx-auto">
+            Your phone number is hidden. Community guidelines apply.
+         </p>
+      </div>
+    </div>
+  );
+
   // Views
   const renderView = () => {
     switch (currentView) {
       case AppView.DASHBOARD:
         return (
-          <div className="p-6 space-y-8 h-full flex flex-col relative overflow-y-auto no-scrollbar pb-24">
+          <div className="p-6 h-full flex flex-col relative overflow-y-auto no-scrollbar pb-24">
             {/* Header */}
-            <div className="flex justify-between items-start pt-2">
+            <div className="flex justify-between items-start pt-2 mb-10">
               <div>
                 <p className="font-mono text-ivory/60 text-xs mb-1">WORKBENCH</p>
                 <h1 className="text-4xl font-serif text-ivory font-black">Hi, {profile.name}.</h1>
@@ -242,7 +306,7 @@ const App: React.FC = () => {
             {/* Main Action - Clipboard Style */}
             <div 
               onClick={() => setCurrentView(AppView.SCANNER)}
-              className="bg-paper p-1 rounded-sm shadow-[10px_10px_0px_rgba(0,0,0,0.2)] transform rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all cursor-pointer group shrink-0"
+              className="bg-paper p-1 rounded-sm shadow-[10px_10px_0px_rgba(0,0,0,0.2)] transform rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all cursor-pointer group shrink-0 mb-10"
             >
               <div className="border-4 border-walnut-dark p-8 flex flex-col items-center text-center border-dashed">
                 <div className="w-24 h-24 bg-walnut-dark rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:bg-confidence-green transition-colors">
@@ -253,47 +317,54 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* My Requests Section */}
-            {myPosts.length > 0 && (
-              <div className="shrink-0">
-                 <div className="flex items-center gap-2 mb-3 border-b border-ivory/20 pb-2">
-                    <span className="text-xl">📋</span>
-                    <h3 className="font-serif font-bold text-ivory tracking-wide">MY OPEN REQUESTS</h3>
-                 </div>
-                 <div className="space-y-3">
-                   {myPosts.map((post) => (
-                     <div key={post.id} className="bg-paper rounded shadow-md p-4 flex justify-between items-center transform -rotate-1">
-                        <div>
-                          <h4 className="font-bold text-gray-800">{post.title}</h4>
-                          <p className="text-xs font-mono text-gray-500">Posted {post.timeAgo}</p>
-                        </div>
-                        <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">PENDING</span>
-                     </div>
-                   ))}
-                 </div>
-              </div>
-            )}
+            {/* SPACER TO PUSH LOWER ITEMS DOWN */}
+            <div className="h-12 w-full shrink-0"></div>
 
-            {/* Quick Tips Taped to Bench */}
-            <div className="w-full overflow-x-auto no-scrollbar pb-4 shrink-0">
-              <div className="flex gap-4">
-                {QUICK_TIPS.map((tip, idx) => (
-                  <div 
-                    key={idx} 
-                    onClick={() => handleAnalyze(tip.query)}
-                    className="bg-yellow-100 min-w-[140px] p-4 shadow-sm flex flex-col justify-between h-28 transform -rotate-1 relative cursor-pointer hover:rotate-1 hover:-translate-y-1 transition-all active:scale-95 group"
-                  >
-                    {/* Tape */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-white/40 rotate-1 backdrop-blur-sm shadow-sm"></div>
-                    <span className="text-3xl group-hover:scale-110 transition-transform">{tip.icon}</span>
-                    <div>
-                      <h4 className="font-bold font-serif text-gray-800 text-sm leading-tight group-hover:text-confidence-green transition-colors">{tip.title}</h4>
-                      <span className="font-mono text-xs text-gray-500">{tip.time}</span>
+            {/* Lower Workbench Area */}
+            <div className="flex flex-col gap-8 pb-8">
+                {/* My Requests Section */}
+                {myPosts.length > 0 && (
+                  <div className="shrink-0">
+                    <div className="flex items-center gap-2 mb-3 border-b border-ivory/20 pb-2">
+                        <span className="text-xl">📋</span>
+                        <h3 className="font-serif font-bold text-ivory tracking-wide">MY OPEN REQUESTS</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {myPosts.map((post) => (
+                        <div key={post.id} className="bg-paper rounded shadow-md p-4 flex justify-between items-center transform -rotate-1">
+                            <div>
+                              <h4 className="font-bold text-gray-800">{post.title}</h4>
+                              <p className="text-xs font-mono text-gray-500">Posted {post.timeAgo}</p>
+                            </div>
+                            <span className="bg-gray-100 text-gray-500 text-[10px] font-bold px-2 py-1 rounded">PENDING</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                )}
+
+                {/* Quick Tips Taped to Bench */}
+                <div className="w-full overflow-x-auto no-scrollbar shrink-0">
+                  <div className="flex gap-4">
+                    {QUICK_TIPS.map((tip, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => handleAnalyze(tip.query)}
+                        className="bg-yellow-100 min-w-[140px] p-4 shadow-sm flex flex-col justify-between h-28 transform -rotate-1 relative cursor-pointer hover:rotate-1 hover:-translate-y-1 transition-all active:scale-95 group"
+                      >
+                        {/* Tape */}
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 bg-white/40 rotate-1 backdrop-blur-sm shadow-sm"></div>
+                        <span className="text-3xl group-hover:scale-110 transition-transform">{tip.icon}</span>
+                        <div>
+                          <h4 className="font-bold font-serif text-gray-800 text-sm leading-tight group-hover:text-confidence-green transition-colors">{tip.title}</h4>
+                          <span className="font-mono text-xs text-gray-500">{tip.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
             </div>
+
           </div>
         );
 
@@ -324,12 +395,16 @@ const App: React.FC = () => {
             
             <div className="grid gap-6">
               {communityPosts.map((post, idx) => (
-                <div key={post.id} className={`bg-paper p-5 shadow-lg relative ${idx % 2 === 0 ? 'rotate-1' : '-rotate-1'} transition-transform hover:rotate-0 hover:z-10`}>
+                <div 
+                    key={post.id} 
+                    onClick={() => setSelectedPost(post)}
+                    className={`bg-paper p-5 shadow-lg relative ${idx % 2 === 0 ? 'rotate-1' : '-rotate-1'} transition-transform hover:rotate-0 hover:z-10 hover:scale-[1.02] cursor-pointer group`}
+                >
                   {/* Pin Graphic */}
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-red-500 shadow-sm border-2 border-red-700"></div>
                   
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold font-serif text-xl text-gray-800 leading-tight">{post.title}</h3>
+                    <h3 className="font-bold font-serif text-xl text-gray-800 leading-tight group-hover:text-trust-blue transition-colors">{post.title}</h3>
                     <span className="font-mono text-[10px] text-gray-400 uppercase tracking-wider">{post.timeAgo}</span>
                   </div>
                   
@@ -342,7 +417,7 @@ const App: React.FC = () => {
                        </div>
                        <span className="text-xs font-bold text-gray-500">{post.author}</span>
                     </div>
-                    <button className="px-3 py-1 bg-trust-blue text-white text-xs font-bold rounded shadow-sm hover:bg-blue-500 uppercase">
+                    <button className="px-3 py-1 bg-trust-blue text-white text-xs font-bold rounded shadow-sm hover:bg-blue-500 uppercase transition-colors group-hover:shadow-md">
                       Lend a Hand
                     </button>
                   </div>
@@ -507,8 +582,10 @@ const App: React.FC = () => {
            </div>
         )}
         
-        {/* Subscription Modal Overlay */}
+        {/* Modals */}
         {showSubscriptionModal && <SubscriptionModal />}
+        {selectedPost && <HelpOfferModal />}
+
       </main>
 
       {/* Bottom Tool Rail (Nav) */}
