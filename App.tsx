@@ -757,6 +757,20 @@ const App: React.FC = () => {
                         Manage Subscription
                       </button>
                   </div>
+
+                  {/* Connect on X Card */}
+                  <div className="bg-paper p-4 rounded shadow-md transform rotate-1 mt-4">
+                      <h3 className="font-bold font-serif text-gray-800 mb-2">CONNECT</h3>
+                      <a 
+                        href="https://x.com/Reagent_Systems" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 bg-black text-white font-bold text-xs rounded shadow-md border-b-4 border-gray-800 active:border-b-0 active:translate-y-1 transition-all"
+                      >
+                        <span className="text-lg">✖️</span>
+                        <span>FOLLOW @Reagent_Systems</span>
+                      </a>
+                  </div>
                   
                   <div className="bg-paper/10 p-4 rounded border border-ivory/20 text-center mt-8">
                      <p className="font-mono text-xs text-ivory/50">HandyMate v1.0.0</p>
