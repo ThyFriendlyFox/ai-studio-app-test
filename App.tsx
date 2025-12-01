@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Scanner from './components/Scanner';
 import FixGuide from './components/FixGuide';
 import ToolFinder from './components/ToolFinder';
 import { analyzeIssue, generateStepDiagram } from './services/geminiService';
-import { AppView, FixPlan, LoadingState, UserProfile, CommunityPost } from './types';
+import { AppView, FixPlan, LoadingState, UserProfile, CommunityPost, ChatMessage, AuthProvider } from './types';
 
 // Mock Initial User Profile
 const initialProfile: UserProfile = {
@@ -31,7 +31,7 @@ const QUICK_TIPS = [
 ];
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  const [currentView, setCurrentView] = useState<AppView>(AppView.SIGN_IN);
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
   const [currentPlan, setCurrentPlan] = useState<FixPlan | null>(null);
   const [profile] = useState<UserProfile>(initialProfile);
@@ -45,6 +45,22 @@ const App: React.FC = () => {
   const [newPostDesc, setNewPostDesc] = useState('');
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [preferences, setPreferences] = useState({
+    sound: true,
+    units: 'imperial',
+    haptics: true,
+    voice: false,
+    contrast: false
+  });
+
+  // Chat State
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, currentView]);
 
   // Handlers
   const handleAnalyze = async (text: string, imageBase64?: string) => {
@@ -114,6 +130,64 @@ const App: React.FC = () => {
         alert(`Secure connection established with ${selectedPost?.author}. Opening video bridge...`);
         setSelectedPost(null);
     }, 2000);
+  };
+
+  const handleSignIn = (provider: AuthProvider) => {
+    // Simulate auth flow
+    setTimeout(() => {
+      setCurrentView(AppView.DASHBOARD);
+    }, 800);
+  };
+
+  const startChat = () => {
+    if (!selectedPost) return;
+    
+    // Seed initial chat
+    setChatMessages([
+      { id: '1', sender: 'partner', text: `Hey! I see you need help with "${selectedPost.title}". What's going on?`, timestamp: new Date() }
+    ]);
+    setCurrentView(AppView.CHAT);
+    setSelectedPost(null); // Close modal
+  };
+
+  const handleSendChatMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      sender: 'me',
+      text: chatInput,
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, newMessage]);
+    setChatInput('');
+
+    // Simulate reply
+    setTimeout(() => {
+      const replies = [
+        "Have you tried checking the manual?",
+        "Oh, I've had that exact issue before. You need a 5mm Allen key.",
+        "Can you send a photo of the back part?",
+        "Don't force it! It should click into place easily.",
+        "Hang on, let me look at my toolbox.",
+        "Sounds like a stripped screw."
+      ];
+      const randomReply = replies[Math.floor(Math.random() * replies.length)];
+      
+      const replyMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'partner',
+        text: randomReply,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, replyMessage]);
+    }, 2000);
+  };
+
+  const togglePreference = (key: keyof typeof preferences) => {
+      setPreferences(prev => ({...prev, [key]: !prev[key]}));
   };
 
   // Lunchbox Modal Component (Inline for simplicity)
@@ -259,7 +333,7 @@ const App: React.FC = () => {
                         <span>📹</span> VIDEO ASSIST
                     </button>
                     <button 
-                         onClick={() => { alert("Chat feature coming soon!"); }}
+                         onClick={startChat}
                         className="w-full py-4 bg-white text-gray-700 border-2 border-gray-300 font-bold font-serif text-lg tracking-wider rounded shadow-[2px_2px_0px_rgba(0,0,0,0.1)] hover:bg-gray-50 hover:translate-y-[1px] transition-all flex items-center justify-center gap-2"
                     >
                         <span>💬</span> TEXT CHAT
@@ -278,11 +352,76 @@ const App: React.FC = () => {
   // Views
   const renderView = () => {
     switch (currentView) {
+      case AppView.SIGN_IN:
+        return (
+           <div className="flex flex-col h-full items-center justify-center p-8 bg-walnut relative overflow-hidden">
+              <div className="absolute inset-0 texture-grain opacity-20"></div>
+              
+              <div className="relative z-10 w-full max-w-sm">
+                 <div className="text-center mb-10">
+                    <div className="w-24 h-24 bg-confidence-green rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-walnut-dark shadow-xl">
+                       <span className="text-5xl">🛠️</span>
+                    </div>
+                    <h1 className="text-5xl font-serif font-black text-ivory drop-shadow-md tracking-tight">HandyMate</h1>
+                    <p className="text-ivory/80 font-mono tracking-widest text-sm mt-2">YOUR WORKSHOP AWAITS</p>
+                 </div>
+
+                 <div className="bg-paper p-6 rounded shadow-[8px_8px_0px_rgba(0,0,0,0.2)] border-t-8 border-gray-800">
+                    <div className="text-center mb-6">
+                       <h2 className="font-serif font-black text-2xl text-gray-800">CLOCK IN</h2>
+                       <p className="text-gray-500 font-mono text-xs">SELECT YOUR CREW BADGE</p>
+                    </div>
+
+                    <div className="space-y-4">
+                       {(['Google', 'Microsoft', 'GitHub', 'X'] as AuthProvider[]).map((provider, idx) => (
+                          <button
+                            key={provider}
+                            onClick={() => handleSignIn(provider)}
+                            className={`
+                                relative w-full py-4 bg-[#E3C08D] border-2 border-[#8B5A2B] 
+                                text-[#5D4037] font-serif font-black text-lg tracking-wide
+                                shadow-[4px_4px_0px_rgba(0,0,0,0.2)] 
+                                flex items-center justify-center gap-3 
+                                hover:bg-[#EED5B7] hover:-translate-y-1 hover:shadow-[6px_6px_0px_rgba(0,0,0,0.2)] 
+                                transition-all active:translate-y-0 active:shadow-none
+                                ${idx % 2 === 0 ? 'rotate-1' : '-rotate-1'}
+                            `}
+                          >
+                             {/* Nails */}
+                             <div className="absolute top-2 left-2 w-2 h-2 rounded-full bg-[#3E2723] shadow-inner opacity-80"></div>
+                             <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#3E2723] shadow-inner opacity-80"></div>
+                             <div className="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-[#3E2723] shadow-inner opacity-80"></div>
+                             <div className="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-[#3E2723] shadow-inner opacity-80"></div>
+
+                             {/* Texture Overlay */}
+                             <div className="absolute inset-0 texture-grain opacity-20"></div>
+
+                            <span className="relative z-10 text-xl">
+                              {provider === 'Google' && '🔵'}
+                              {provider === 'Microsoft' && '🪟'}
+                              {provider === 'GitHub' && '🐱'}
+                              {provider === 'X' && '✖️'}
+                            </span>
+                            <span className="relative z-10">Sign in with {provider}</span>
+                          </button>
+                       ))}
+                    </div>
+                    
+                    <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+                       <p className="text-[10px] text-gray-400">
+                          By clocking in, you agree to our Workshop Rules & Safety Guidelines.
+                       </p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        );
+
       case AppView.DASHBOARD:
         return (
-          <div className="p-6 h-full flex flex-col relative overflow-hidden no-scrollbar pb-24">
+          <div className="p-6 h-full flex flex-col relative overflow-hidden no-scrollbar">
             {/* Header */}
-            <div className="flex justify-between items-start pt-2 mb-10">
+            <div className="flex justify-between items-start pt-2 mb-12">
               <div>
                 <p className="font-mono text-ivory/60 text-xs mb-1">WORKBENCH</p>
                 <h1 className="text-4xl font-serif text-ivory font-black">Hi, {profile.name}.</h1>
@@ -306,7 +445,7 @@ const App: React.FC = () => {
             {/* Main Action - Clipboard Style */}
             <div 
               onClick={() => setCurrentView(AppView.SCANNER)}
-              className="bg-paper p-1 rounded-sm shadow-[10px_10px_0px_rgba(0,0,0,0.2)] transform rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all cursor-pointer group shrink-0 mb-10"
+              className="bg-paper p-1 rounded-sm shadow-[10px_10px_0px_rgba(0,0,0,0.2)] transform rotate-1 hover:rotate-0 hover:scale-[1.02] transition-all cursor-pointer group shrink-0 mb-8"
             >
               <div className="border-4 border-walnut-dark p-8 flex flex-col items-center text-center border-dashed">
                 <div className="w-24 h-24 bg-walnut-dark rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:bg-confidence-green transition-colors">
@@ -318,10 +457,10 @@ const App: React.FC = () => {
             </div>
 
             {/* SPACER TO PUSH LOWER ITEMS DOWN */}
-            <div className="h-12 w-full shrink-0"></div>
+            {/* Removed h-12 to reduce space, replaced with mt-auto logic below */}
 
             {/* Lower Workbench Area */}
-            <div className="flex flex-col gap-8 pb-8">
+            <div className="flex flex-col gap-6 mt-auto pb-20">
                 {/* My Requests Section */}
                 {myPosts.length > 0 && (
                   <div className="shrink-0">
@@ -430,6 +569,75 @@ const App: React.FC = () => {
             </div>
           </div>
         );
+      
+      case AppView.CHAT:
+        return (
+          <div className="h-full flex flex-col bg-[#2C2C2C] relative overflow-hidden">
+             {/* Header */}
+             <div className="bg-[#3E2723] p-4 flex items-center gap-4 text-[#DEB887] shadow-lg shrink-0 z-20 border-b-4 border-[#271917]">
+                <button onClick={() => setCurrentView(AppView.COMMUNITY)} className="text-xl">←</button>
+                <div className="flex-1">
+                   <h2 className="font-serif font-bold text-lg tracking-widest">WALKIE TALKIE</h2>
+                   <p className="font-mono text-xs text-green-400 flex items-center gap-1 opacity-80">
+                     <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                     CHANNEL OPEN
+                   </p>
+                </div>
+             </div>
+             
+             {/* Messages Area - Dark Shed Wall */}
+             <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-[#2C2C2C] relative">
+                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-felt.png')] opacity-10 pointer-events-none"></div>
+
+                {chatMessages.map((msg, idx) => (
+                   <div key={msg.id} className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'} animate-clunk`}>
+                      <div className={`
+                         relative max-w-[85%] p-4 shadow-[4px_4px_6px_rgba(0,0,0,0.5)] 
+                         font-serif transform
+                         ${msg.sender === 'me' 
+                           ? 'bg-[#E3C08D] text-[#3E2723] rotate-1' 
+                           : 'bg-[#D2B48C] text-[#3E2723] -rotate-1'}
+                      `}>
+                         {/* Nails */}
+                         <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-[#3E2723] opacity-70"></div>
+                         <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3E2723] opacity-70"></div>
+                         <div className="absolute bottom-1 left-1 w-1.5 h-1.5 rounded-full bg-[#3E2723] opacity-70"></div>
+                         <div className="absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full bg-[#3E2723] opacity-70"></div>
+                         
+                         {/* Wood Grain Overlay */}
+                         <div className="absolute inset-0 texture-grain opacity-20 pointer-events-none mix-blend-multiply"></div>
+
+                         <p className="text-base font-bold leading-tight relative z-10">{msg.text}</p>
+                         <span className="text-[10px] font-mono block text-right mt-2 opacity-60 font-bold relative z-10">
+                            {msg.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                         </span>
+                      </div>
+                   </div>
+                ))}
+                <div ref={chatEndRef}></div>
+             </div>
+
+             {/* Input Area - Tool Tray */}
+             <div className="bg-[#3E2723] p-4 border-t-4 border-[#271917] shrink-0 shadow-[0_-5px_15px_rgba(0,0,0,0.5)]">
+                <form onSubmit={handleSendChatMessage} className="flex gap-2">
+                   <input
+                     type="text"
+                     value={chatInput}
+                     onChange={(e) => setChatInput(e.target.value)}
+                     placeholder="Type message..."
+                     className="flex-1 bg-[#2C2C2C] border-2 border-[#5D4037] rounded-sm px-4 py-3 focus:outline-none focus:border-[#E3C08D] font-mono text-[#E3C08D] placeholder-[#E3C08D]/40"
+                   />
+                   <button 
+                      type="submit"
+                      disabled={!chatInput.trim()}
+                      className="bg-[#E3C08D] text-[#3E2723] font-black font-serif px-6 py-2 rounded-sm shadow-[2px_2px_0px_rgba(0,0,0,0.5)] disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider text-sm hover:bg-[#F5DEB3] active:translate-y-1 active:shadow-none transition-all"
+                   >
+                     SEND
+                   </button>
+                </form>
+             </div>
+          </div>
+        );
 
       case AppView.ASK_HELP:
         return (
@@ -494,44 +702,44 @@ const App: React.FC = () => {
                   <div className="bg-paper p-4 rounded shadow-md transform rotate-1">
                       <h3 className="font-bold font-serif text-gray-800 mb-4">PREFERENCES</h3>
                       
-                      {/* Existing Sound Pref */}
-                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                      {/* Sound Pref */}
+                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3" onClick={() => togglePreference('sound')}>
                           <span className="font-mono text-sm text-gray-600">Sound Effects</span>
-                          <div className="w-10 h-5 bg-confidence-green rounded-full relative cursor-pointer shadow-inner">
-                            <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow"></div>
+                          <div className={`w-10 h-5 rounded-full relative cursor-pointer shadow-inner transition-colors ${preferences.sound ? 'bg-confidence-green' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow transition-all ${preferences.sound ? 'right-1' : 'left-1'}`}></div>
                           </div>
                       </div>
 
-                      {/* New Units Pref */}
-                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                      {/* Units Pref */}
+                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3" onClick={() => togglePreference('units')}>
                         <span className="font-mono text-sm text-gray-600">Measurement Units</span>
                         <div className="flex bg-gray-200 rounded p-1 shadow-inner cursor-pointer">
-                            <span className="px-2 py-1 text-[10px] font-bold text-gray-400">IMPERIAL</span>
-                            <span className="px-2 py-1 text-[10px] font-bold bg-white rounded shadow text-gray-800">METRIC</span>
+                            <span className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${preferences.units === 'imperial' ? 'bg-white shadow text-gray-800' : 'text-gray-400'}`}>IMPERIAL</span>
+                            <span className={`px-2 py-1 text-[10px] font-bold rounded transition-colors ${preferences.units === 'metric' ? 'bg-white shadow text-gray-800' : 'text-gray-400'}`}>METRIC</span>
                         </div>
                       </div>
 
-                      {/* New Haptics Pref */}
-                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                      {/* Haptics Pref */}
+                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3" onClick={() => togglePreference('haptics')}>
                           <span className="font-mono text-sm text-gray-600">Haptic Feedback</span>
-                          <div className="w-10 h-5 bg-confidence-green rounded-full relative cursor-pointer shadow-inner">
-                            <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow"></div>
+                          <div className={`w-10 h-5 rounded-full relative cursor-pointer shadow-inner transition-colors ${preferences.haptics ? 'bg-confidence-green' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow transition-all ${preferences.haptics ? 'right-1' : 'left-1'}`}></div>
                           </div>
                       </div>
 
-                      {/* New Voice Guide Pref */}
-                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3">
+                      {/* Voice Guide Pref */}
+                      <div className="flex justify-between items-center border-b border-dashed border-gray-300 pb-3 mb-3" onClick={() => togglePreference('voice')}>
                           <span className="font-mono text-sm text-gray-600">Voice Coach</span>
-                          <div className="w-10 h-5 bg-gray-300 rounded-full relative cursor-pointer shadow-inner">
-                            <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full shadow"></div>
+                          <div className={`w-10 h-5 rounded-full relative cursor-pointer shadow-inner transition-colors ${preferences.voice ? 'bg-confidence-green' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow transition-all ${preferences.voice ? 'right-1' : 'left-1'}`}></div>
                           </div>
                       </div>
 
-                      {/* Existing Contrast Pref */}
-                      <div className="flex justify-between items-center">
+                      {/* Contrast Pref */}
+                      <div className="flex justify-between items-center" onClick={() => togglePreference('contrast')}>
                           <span className="font-mono text-sm text-gray-600">High Contrast</span>
-                          <div className="w-10 h-5 bg-gray-300 rounded-full relative cursor-pointer shadow-inner">
-                            <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full shadow"></div>
+                          <div className={`w-10 h-5 rounded-full relative cursor-pointer shadow-inner transition-colors ${preferences.contrast ? 'bg-confidence-green' : 'bg-gray-300'}`}>
+                            <div className={`absolute top-1 w-3 h-3 bg-white rounded-full shadow transition-all ${preferences.contrast ? 'right-1' : 'left-1'}`}></div>
                           </div>
                       </div>
                   </div>
@@ -589,41 +797,43 @@ const App: React.FC = () => {
       </main>
 
       {/* Bottom Tool Rail (Nav) */}
-      <nav className="h-24 bg-walnut-dark relative z-20 shrink-0 flex items-end justify-between px-6 pb-4 border-t-8 border-black/20 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
-         {/* Screw heads visuals */}
-         <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-gray-600 shadow-inner flex items-center justify-center"><div className="w-2 h-0.5 bg-gray-800 rotate-45"></div></div>
-         <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gray-600 shadow-inner flex items-center justify-center"><div className="w-2 h-0.5 bg-gray-800 rotate-45"></div></div>
+      {currentView !== AppView.SIGN_IN && currentView !== AppView.CHAT && (
+        <nav className="h-24 bg-walnut-dark relative z-20 shrink-0 flex items-end justify-between px-6 pb-4 border-t-8 border-black/20 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+           {/* Screw heads visuals */}
+           <div className="absolute top-2 left-2 w-3 h-3 rounded-full bg-gray-600 shadow-inner flex items-center justify-center"><div className="w-2 h-0.5 bg-gray-800 rotate-45"></div></div>
+           <div className="absolute top-2 right-2 w-3 h-3 rounded-full bg-gray-600 shadow-inner flex items-center justify-center"><div className="w-2 h-0.5 bg-gray-800 rotate-45"></div></div>
 
-        <button 
-          onClick={() => setCurrentView(AppView.DASHBOARD)}
-          className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.DASHBOARD ? 'opacity-100 scale-105' : 'opacity-60'}`}
-        >
-          <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.DASHBOARD ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
-             <span className="text-2xl">🏠</span>
-          </div>
-          <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.DASHBOARD ? 'text-confidence-green' : 'text-ivory'}`}>HOME</span>
-        </button>
+          <button 
+            onClick={() => setCurrentView(AppView.DASHBOARD)}
+            className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.DASHBOARD ? 'opacity-100 scale-105' : 'opacity-60'}`}
+          >
+            <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.DASHBOARD ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
+               <span className="text-2xl">🏠</span>
+            </div>
+            <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.DASHBOARD ? 'text-confidence-green' : 'text-ivory'}`}>HOME</span>
+          </button>
 
-        <button 
-          onClick={() => setCurrentView(AppView.COMMUNITY)}
-          className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.COMMUNITY ? 'opacity-100 scale-105' : 'opacity-60'}`}
-        >
-          <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.COMMUNITY ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
-             <span className="text-2xl">🪑</span>
-          </div>
-          <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.COMMUNITY ? 'text-confidence-green' : 'text-ivory'}`}>BENCH</span>
-        </button>
+          <button 
+            onClick={() => setCurrentView(AppView.COMMUNITY)}
+            className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.COMMUNITY ? 'opacity-100 scale-105' : 'opacity-60'}`}
+          >
+            <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.COMMUNITY ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
+               <span className="text-2xl">🪑</span>
+            </div>
+            <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.COMMUNITY ? 'text-confidence-green' : 'text-ivory'}`}>BENCH</span>
+          </button>
 
-        <button 
-           onClick={() => setCurrentView(AppView.ASK_HELP)}
-           className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.ASK_HELP ? 'opacity-100 scale-105' : 'opacity-60'}`}
-        >
-          <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.ASK_HELP ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
-            <span className="text-2xl">📣</span>
-          </div>
-          <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.ASK_HELP ? 'text-confidence-green' : 'text-ivory'}`}>ASK</span>
-        </button>
-      </nav>
+          <button 
+             onClick={() => setCurrentView(AppView.ASK_HELP)}
+             className={`flex flex-col items-center group w-20 transition-all ${currentView === AppView.ASK_HELP ? 'opacity-100 scale-105' : 'opacity-60'}`}
+          >
+            <div className={`w-12 h-12 flex items-center justify-center rounded-lg shadow-lg border-b-4 group-active:border-b-0 group-active:translate-y-1 transition-all ${currentView === AppView.ASK_HELP ? 'bg-confidence-green border-green-900' : 'bg-gray-700 border-gray-900'}`}>
+              <span className="text-2xl">📣</span>
+            </div>
+            <span className={`text-[10px] font-bold mt-1 font-mono tracking-widest ${currentView === AppView.ASK_HELP ? 'text-confidence-green' : 'text-ivory'}`}>ASK</span>
+          </button>
+        </nav>
+      )}
     </div>
   );
 };

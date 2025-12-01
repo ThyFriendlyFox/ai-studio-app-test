@@ -1,3 +1,4 @@
+
 export interface FixStep {
   stepNumber: number;
   instruction: string;
@@ -46,7 +47,17 @@ export interface CommunityPost {
   timeAgo: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  sender: 'me' | 'partner';
+  text: string;
+  timestamp: Date;
+}
+
+export type AuthProvider = 'Google' | 'Microsoft' | 'GitHub' | 'X';
+
 export enum AppView {
+  SIGN_IN = 'SIGN_IN',
   DASHBOARD = 'DASHBOARD',
   SCANNER = 'SCANNER',
   FIX_GUIDE = 'FIX_GUIDE',
@@ -56,6 +67,7 @@ export enum AppView {
   SETTINGS = 'SETTINGS',
   COMMUNITY = 'COMMUNITY',
   ASK_HELP = 'ASK_HELP',
+  CHAT = 'CHAT',
 }
 
 export enum LoadingState {
