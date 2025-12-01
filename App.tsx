@@ -280,7 +280,7 @@ const App: React.FC = () => {
     switch (currentView) {
       case AppView.DASHBOARD:
         return (
-          <div className="p-6 h-full flex flex-col relative overflow-y-auto no-scrollbar pb-24">
+          <div className="p-6 h-full flex flex-col relative overflow-hidden no-scrollbar pb-24">
             {/* Header */}
             <div className="flex justify-between items-start pt-2 mb-10">
               <div>
@@ -433,7 +433,7 @@ const App: React.FC = () => {
 
       case AppView.ASK_HELP:
         return (
-          <div className="p-6 h-full flex flex-col relative z-10 overflow-y-auto no-scrollbar pb-24">
+          <div className="p-6 h-full flex flex-col relative z-10 overflow-hidden pb-24">
              <h2 className="text-3xl font-serif font-black text-ivory mb-2 border-b-4 border-ivory/20 pb-2">ASK FOR HELP</h2>
              <p className="text-ivory/60 font-mono text-xs mb-8">POST YOUR PROJECT TO THE BENCH</p>
              
